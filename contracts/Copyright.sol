@@ -1,4 +1,5 @@
 pragma solidity ^0.4.4;
+pragma experimental ABIEncoderV2;
 
 contract Copyright {
   Song[] public songs;
@@ -134,5 +135,41 @@ contract Copyright {
   	return msg.sender.balance;
   }
 
+  function getPurchasedSongs() public returns (bool) {
+    /* require(checkUserExists(msg.sender)); */
+    /* Song[] purchasedSongs; */
+    /* for(uint i = 0; i < songs.length; i++) {
+      bytes32 songID = songs[i].ID;
+      if (userInfo[msg.sender].purchasedSongs[songID] == 1) {
+        purchasedSongs.push(songs[i]);
+      }
+    } */
+    /* return purchasedSongs; */
+    return true;
+  }
+
+  function getUploadedSongs() public returns (Song[]) {
+    require(checkUserExists(msg.sender));
+    Song[] uploadedSongs;
+    for(uint i = 0; i < songs.length; i++) {
+      bytes32 songID = songs[i].ID;
+      if (userInfo[msg.sender].uploadedSongs[songID] == 1) {
+        uploadedSongs.push(songs[i]);
+      }
+    }
+    return uploadedSongs;
+  }
+
+  function getUnpurchasedSongs() public returns (Song[]) {
+    require(checkUserExists(msg.sender));
+    Song[] unpurchasedSongs;
+    for(uint i = 0; i < songs.length; i++) {
+      bytes32 songID = songs[i].ID;
+      if (userInfo[msg.sender].uploadedSongs[songID] != 1 && userInfo[msg.sender].purchasedSongs[songID] != 1) {
+        unpurchasedSongs.push(songs[i]);
+      }
+    }
+    return unpurchasedSongs;
+  }
 
 }

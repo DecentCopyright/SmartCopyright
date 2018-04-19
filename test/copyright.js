@@ -43,7 +43,7 @@ contract("Copyright!", function (accounts) {
 
   it("should return fileInfo after purchase", async function () {
     const contract = await Copyright.deployed();
-    let songID = "0x24a80a9a2d03f38eaf4c19fc10e3cf9eeb559654a74d411662f28367bcd6f1cf";
+    let songID = "0xb2c1d05e002881ff4f6bf0b12b9bc181da0ae640da3f7f71ad28cc0112e4a527";
     let price = 1000;
     let status = await contract.buyLicense(songID, {value: price});
     let fileInfo = "song_url password";
@@ -59,6 +59,14 @@ contract("Copyright!", function (accounts) {
     console.log(result);
     assert.equal(result, 0);
   });
+
+  it("should return all songs by type", async function () {
+   const contract = await Copyright.deployed();
+   let result = await contract.getPurchasedSongs.call();
+   console.log("-----Test Result-----")
+   console.log(result);
+   assert.equal(result, 0);
+ });
 
 
 });
