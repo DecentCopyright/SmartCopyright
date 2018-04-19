@@ -23,12 +23,13 @@ contract("Copyright!", function (accounts) {
     // // console.log(hash);
     let fileInfo = "song_url password";
     let hash = await contract.getSongHash.call(songName, price, holders, shares);
+    hashToTest = hash;
     console.log("hash get: " + hash);
     let status = await contract.registerCopyright(hash, songName, fileInfo, price, holders, shares);
-    //
+
     // for (let e of status.logs) {
     //   if (e.event == "registerEvent") {
-    //     hash = e.args.param
+    //     // hashToTest = e.args.param
     //     console.log("Hash: " + hash);
     //   }
     // }
@@ -43,7 +44,7 @@ contract("Copyright!", function (accounts) {
 
   it("should return fileInfo after purchase", async function () {
     const contract = await Copyright.deployed();
-    let songID = "0xb2c1d05e002881ff4f6bf0b12b9bc181da0ae640da3f7f71ad28cc0112e4a527";
+    let songID = hashToTest;//"0xb803ca1f1e989f054fffed5317023034319af98f39e8720d39aa9f137060e006";
     let price = 1000;
     let status = await contract.buyLicense(songID, {value: price});
     let fileInfo = "song_url password";

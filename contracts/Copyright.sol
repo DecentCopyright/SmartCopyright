@@ -20,7 +20,11 @@ contract Copyright {
   struct UserStatus {
     bool registered;
     mapping(bytes32 => uint) purchasedSongs;
+    bytes32[] purchasedList;
+    uint purchasedCount;
     mapping(bytes32 => uint) uploadedSongs;
+    bytes32[] uploadedList;
+    uint uploadedCount;
   }
 
   struct Song {
@@ -31,6 +35,9 @@ contract Copyright {
     ShareHolder[] shareHolders;
     uint price;
     address[] licenseHolders;
+
+    /* address[] licenseHoldersList;
+    mapping(address => bool) licenseHolders; */
   }
 
   //TODO: check duplicate
@@ -56,6 +63,8 @@ contract Copyright {
     songInfo[songID].price = price;
     songInfo[songID].fileInfo = fileInfo;
     userInfo[msg.sender].uploadedSongs[songID] = 1;
+    userInfo[msg.sender].uploadedList.push(songID);
+    userInfo[msg.sender].uploadedCount += 1;
     require(songInfo[songID].shareHolders.length == 0);   // If we're registering the song for the first time, this should be an empty array
     for(uint i = 0; i < shares.length; i++) {
       ShareHolder memory holder = ShareHolder({ addr: holders[i], share: shares[i]});
@@ -115,6 +124,8 @@ contract Copyright {
   	// the ether is paid to the smart contract first through payable function
   	require(msg.value >= price);
     userInfo[msg.sender].purchasedSongs[songID] = 1;
+    userInfo[msg.sender].purchasedList.push(songID);
+    userInfo[msg.sender].purchasedCount += 1;
     songInfo[songID].licenseHolders.push(msg.sender);
     // pay the coopyright holder
   	payRoyalty(songID, msg.value);
@@ -135,19 +146,34 @@ contract Copyright {
   	return msg.sender.balance;
   }
 
-  function getPurchasedSongs() public returns (bool) {
-    /* require(checkUserExists(msg.sender)); */
-    /* Song[] purchasedSongs; */
-    /* for(uint i = 0; i < songs.length; i++) {
+  function getPurchasedSongs() public constant returns (bytes32[]) {
+    require(checkUserExists(msg.sender));
+    return userInfo[msg.sender].purchasedList;
+    /* uint counter = 0;
+    uint size = userInfo[msg.sender].purchasedCount;
+    string[] memory purchasedSongs = new string[](size);
+    bytes32[] memory purchasedSongs = new bytes32[](10);
+    string[2] purchasedSongs;
+    bytes32 songID;
+    for(uint i = 0; i < songs.length; i++) {
       bytes32 songID = songs[i].ID;
+      songID = songs[i].ID;
       if (userInfo[msg.sender].purchasedSongs[songID] == 1) {
-        purchasedSongs.push(songs[i]);
-      }
-    } */
-    /* return purchasedSongs; */
-    return true;
-  }
+        purchasedSongs[counter] = bytes32(songs[i].name);
+        counter += 1;
 
+        purchasedSongs[counter] = songs[i].ID;
+        counter += 1;
+
+        purchasedSongs[counter] = songs[i].ID;
+        counter += 1;
+      } */
+    /* } */
+    /* return purchasedSongs; */
+    //userInfo[msg.sender].purchasedSongs[songID] == 1;
+    /* return true; */
+  }
+/*
   function getUploadedSongs() public returns (Song[]) {
     require(checkUserExists(msg.sender));
     Song[] uploadedSongs;
@@ -170,6 +196,6 @@ contract Copyright {
       }
     }
     return unpurchasedSongs;
-  }
+  } */
 
 }
