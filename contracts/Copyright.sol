@@ -9,7 +9,7 @@ contract Copyright {
 
   event registerEvent(bytes32 param);
   event licenseEvent(bytes32 song, address authorized);
-  event downloadEvent(bytes32 songID, string downloadInfo);
+  // event downloadEvent(bytes32 songID, string downloadInfo);
 
   struct ShareHolder {
     address addr;
@@ -23,6 +23,7 @@ contract Copyright {
   }
 
   struct Song {
+    bool registered;
     bytes32 ID;
     string downloadInfo;
     string name;
@@ -54,6 +55,7 @@ contract Copyright {
 
     bytes32 songID = keccak256(name, price, holders);
     // TODO: check if ID is unique
+    songInfo[songID].registered = true;
     songInfo[songID].ID = songID;
     songInfo[songID].name = name;
     songInfo[songID].price = price;
@@ -71,9 +73,9 @@ contract Copyright {
     songs.push(songInfo[songID]);
   }
 
-  function getDownloadInfo(bytes32 songID) public returns (string) {
+  function getDownloadInfo(bytes32 songID) public constant returns (string) {
     require(canDownload(msg.sender, songID));
-    emit downloadEvent(songID, songInfo[songID].downloadInfo);
+    // emit downloadEvent(songID, songInfo[songID].downloadInfo);
     return songInfo[songID].downloadInfo;
   }
 
@@ -101,12 +103,18 @@ contract Copyright {
     return checkUserExists(msg.sender);
   }
 
+  function checkSongExists(bytes32 songID) public constant returns (bool) {
+    return songInfo[songID].registered;
+  }
+
   function checkSongPrice(bytes32 songID) public constant returns (uint) {
     return songInfo[songID].price;
   }
 
   function buyLicense(bytes32 songID) public payable {
   	require(checkUserExists(msg.sender));
+    require(checkSongExists(songID));
+
   	uint price = songInfo[songID].price;
   	// Check that the amount paid is >= the price
   	// the ether is paid to the smart contract first through payable function
