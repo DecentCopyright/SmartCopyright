@@ -6,12 +6,10 @@ contract Copyright {
   // assume one song only has one copyright holder for now
   mapping(bytes32 => Song) songInfo;
   mapping(address => UserStatus) userInfo;
-  // mapping(uint => uint) priceInfo;
-  // mapping(uint => address[]) authorization;
-  // mapping(address => Song[]) purchasedSongs;
-  // mapping(address => Song[]) uploadedSongs;
 
   event registerEvent(bytes32 param);
+  event licenseEvent(bytes32 song, address authorized);
+  event downloadEvent(bytes32 songID, string downloadInfo);
 
   struct ShareHolder {
     address addr;
@@ -20,12 +18,13 @@ contract Copyright {
 
   struct UserStatus {
     bool registered;
-    bytes32[] purchasedSongs;
-    bytes32[] uploadedSongs;
+    mapping(bytes32 => uint) purchasedSongs;
+    mapping(bytes32 => uint) uploadedSongs;
   }
 
   struct Song {
     bytes32 ID;
+    string downloadInfo;
     string name;
     ShareHolder[] shareHolders;
     uint price;
@@ -38,22 +37,28 @@ contract Copyright {
     userInfo[msg.sender].registered = true;
   }
 
-  /* function songHash(string name, uint price, address[] holders, uint[] shares) public returns (bytes32) {
-    return keccak256(name, price, holders);
-  } */
+  function getSongHash(string name, uint price, address[] holders, uint[] shares) public returns (bytes32) {
+    bytes32 hashed = keccak256(name, price, holders, shares);
+    /* bytes memory bytesArray = new bytes(32);
+    for (uint256 i; i < 32; i++) {
+        bytesArray[i] = hashed[i];
+    }
+    return string(bytesArray); */
+    return hashed;
+  }
 
-  function registerCopyright(string name, uint price, address[] holders, uint[] shares) public {
+  function registerCopyright(string name, string downloadInfo, uint price, address[] holders, uint[] shares) public {
     require(checkUserExists(msg.sender));
     require(shares.length == holders.length);
     require(checkShareSum(shares));
-    // songs.push(song);
-    // priceInfo[song] = price;
-    // holderInfo[song].add = msg.sender;
-    // holderInfo[song].share = 1;
+
     bytes32 songID = keccak256(name, price, holders);
     // TODO: check if ID is unique
+    songInfo[songID].ID = songID;
     songInfo[songID].name = name;
     songInfo[songID].price = price;
+    songInfo[songID].downloadInfo = downloadInfo;
+    userInfo[msg.sender].uploadedSongs[songID] = 1;
     require(songInfo[songID].shareHolders.length == 0);   // If we're registering the song for the first time, this should be an empty array
     for(uint i = 0; i < shares.length; i++) {
       ShareHolder memory holder = ShareHolder({ addr: holders[i], share: shares[i]});
@@ -64,6 +69,20 @@ contract Copyright {
 
     // TODO: Check if song already exists in the array
     songs.push(songInfo[songID]);
+  }
+
+  function getDownloadInfo(bytes32 songID) public returns (string) {
+    require(canDownload(msg.sender, songID));
+    emit downloadEvent(songID, songInfo[songID].downloadInfo);
+    return songInfo[songID].downloadInfo;
+  }
+
+  function canDownload(address user, bytes32 songID) public returns (bool) {
+    if(userInfo[user].uploadedSongs[songID] == 1 ||
+      userInfo[user].purchasedSongs[songID] == 1) {
+        return true;
+      }
+      return false;
   }
 
   function checkShareSum(uint[] list) public constant returns (bool) {
@@ -92,11 +111,12 @@ contract Copyright {
   	// Check that the amount paid is >= the price
   	// the ether is paid to the smart contract first through payable function
   	require(msg.value >= price);
-  	// authorization[song].push(msg.sender);
-  	// pay the coopyright holder
-    userInfo[msg.sender].purchasedSongs.push(songID);
+    userInfo[msg.sender].purchasedSongs[songID] = 1;
     songInfo[songID].licenseHolders.push(msg.sender);
+    // pay the coopyright holder
   	payRoyalty(songID, msg.value);
+
+    emit licenseEvent(songID, msg.sender);
   }
 
   function payRoyalty(bytes32 songID, uint amount) private {
@@ -111,5 +131,6 @@ contract Copyright {
   function getMyBalance() public constant returns (uint) {
   	return msg.sender.balance;
   }
+
 
 }
