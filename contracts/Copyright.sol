@@ -7,9 +7,9 @@ contract Copyright {
   mapping(bytes32 => Song) songInfo;
   mapping(address => UserStatus) userInfo;
 
-  event registerEvent(bytes32 param);
-  event licenseEvent(bytes32 song, address authorized);
-  // event downloadEvent(bytes32 songID, string downloadInfo);
+  event registerEvent(bytes32 songID);
+  event licenseEvent(bytes32 songID, address authorized);
+  // event downloadEvent(bytes32 songID, string fileInfo);
 
   struct ShareHolder {
     address addr;
@@ -25,7 +25,7 @@ contract Copyright {
   struct Song {
     bool registered;
     bytes32 ID;
-    string downloadInfo;
+    string fileInfo;
     string name;
     ShareHolder[] shareHolders;
     uint price;
@@ -38,17 +38,7 @@ contract Copyright {
     userInfo[msg.sender].registered = true;
   }
 
-  function getSongHash(string name, uint price, address[] holders, uint[] shares) public returns (bytes32) {
-    bytes32 hashed = keccak256(name, price, holders, shares);
-    /* bytes memory bytesArray = new bytes(32);
-    for (uint256 i; i < 32; i++) {
-        bytesArray[i] = hashed[i];
-    }
-    return string(bytesArray); */
-    return hashed;
-  }
-
-  function registerCopyright(string name, string downloadInfo, uint price, address[] holders, uint[] shares) public {
+  function registerCopyright(string name, string fileInfo, uint price, address[] holders, uint[] shares) public {
     require(checkUserExists(msg.sender));
     require(shares.length == holders.length);
     require(checkShareSum(shares));
@@ -59,7 +49,7 @@ contract Copyright {
     songInfo[songID].ID = songID;
     songInfo[songID].name = name;
     songInfo[songID].price = price;
-    songInfo[songID].downloadInfo = downloadInfo;
+    songInfo[songID].fileInfo = fileInfo;
     userInfo[msg.sender].uploadedSongs[songID] = 1;
     require(songInfo[songID].shareHolders.length == 0);   // If we're registering the song for the first time, this should be an empty array
     for(uint i = 0; i < shares.length; i++) {
@@ -75,8 +65,8 @@ contract Copyright {
 
   function getDownloadInfo(bytes32 songID) public constant returns (string) {
     require(canDownload(msg.sender, songID));
-    // emit downloadEvent(songID, songInfo[songID].downloadInfo);
-    return songInfo[songID].downloadInfo;
+    // emit downloadEvent(songID, songInfo[songID].fileInfo);
+    return songInfo[songID].fileInfo;
   }
 
   function canDownload(address user, bytes32 songID) public returns (bool) {

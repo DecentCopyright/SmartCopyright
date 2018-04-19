@@ -23,14 +23,44 @@ tx_hash = contract.constructor().transact({'from': w3.eth.accounts[0]})
 tx_receipt = w3.eth.getTransactionReceipt(tx_hash)
 contract_address = tx_receipt['contractAddress']
 print('Contract address: {}'.format(contract_address))
-
+print('Deployed!\n')
 
 # Contract instance in concise mode
 abifile = open('copyring.abi', 'r')
 abi = json.load(abifile)
 abifile.close()
 
-contract_instance = w3.eth.contract(abi=abi, address=contract_address, ContractFactoryClass=ConciseContract)
+c = w3.eth.contract(abi=abi, address=contract_address)
+
+print('Register users')
+c.functions.userRegister().transact({'from': w3.eth.accounts[0]})
+c.functions.userRegister().transact({'from': w3.eth.accounts[1]})
+u0 = c.functions.amIRegistered().call({'from': w3.eth.accounts[0]})
+u1 = c.functions.amIRegistered().call({'from': w3.eth.accounts[1]})
+assert(u0 and u1)
+
+print('Uploading a song')
+songName = 'ssongSsong'
+price = 1000
+holders = [w3.eth.accounts[0]]
+shares = [100]
+fileInfo = 'fake_URL fake_key'
+tx_hash = c.functions.registerCopyright(songName, fileInfo, price, holders, shares).transact({'from': w3.eth.accounts[0]})
+tx_receipt = w3.eth.getTransactionReceipt(tx_hash)
+logs = c.events.registerEvent().processReceipt(tx_receipt)
+songID = Web3.toHex(logs[0]['args']['songID'])
+print("\tsongID: " + songID)
+
+print('Purchasing a song')
+tx_hash = c.functions.buyLicense(songID).transact({'from': w3.eth.accounts[1], 'value': price})
+tx_receipt = w3.eth.getTransactionReceipt(tx_hash)
+logs = c.events.licenseEvent().processReceipt(tx_receipt)
+purchased_songID = Web3.toHex(logs[0]['args']['songID'])
+print("\tpurchased_songID: " + purchased_songID)
+
+print('Get file info')
+purchased_fileInfo = c.functions.getDownloadInfo(songID).call({'from': w3.eth.accounts[1]});
+print("\tpurchased_fileInfo: " + purchased_fileInfo)
 
 # Getters + Setters for web3.eth.contract object
 # print('Contract value: {}'.format(contract_instance.greet()))
