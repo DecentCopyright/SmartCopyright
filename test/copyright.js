@@ -1,4 +1,5 @@
 var Copyright = artifacts.require("./Copyright.sol");
+var hashToTest = "";
 
 contract("Copyright!", function (accounts) {
   it("should return one right after you register", async function() {
@@ -20,10 +21,10 @@ contract("Copyright!", function (accounts) {
     let shares = [50, 30, 20];
     // let hash = await contract.songHash.call(songName, price, holders, shares);
     // // console.log(hash);
-    let downloadInfo = "song_url password";
+    let fileInfo = "song_url password";
     let hash = await contract.getSongHash.call(songName, price, holders, shares);
     console.log("hash get: " + hash);
-    let status = await contract.registerCopyright(hash, songName, downloadInfo, price, holders, shares);
+    let status = await contract.registerCopyright(hash, songName, fileInfo, price, holders, shares);
     //
     // for (let e of status.logs) {
     //   if (e.event == "registerEvent") {
@@ -32,7 +33,7 @@ contract("Copyright!", function (accounts) {
     //   }
     // }
 
-    let ret_url = await contract.getDownloadInfo.call(hash);
+    let ret_url = await contract.getfileInfo.call(hash);
     console.log("return url: " + ret_url);
 
     let result = await contract.checkSongPrice.call(hash);
@@ -40,15 +41,15 @@ contract("Copyright!", function (accounts) {
     assert.equal(price, result);
   });
 
-  it("should return downloadInfo after purchase", async function () {
+  it("should return fileInfo after purchase", async function () {
     const contract = await Copyright.deployed();
     let songID = "0x24a80a9a2d03f38eaf4c19fc10e3cf9eeb559654a74d411662f28367bcd6f1cf";
     let price = 1000;
     let status = await contract.buyLicense(songID, {value: price});
-    let downloadInfo = "song_url password";
-    let ret_val = await contract.getDownloadInfo.call(songID);
+    let fileInfo = "song_url password";
+    let ret_val = await contract.getfileInfo.call(songID);
     console.log("return url: " + ret_val);
-    assert.equal(ret_val, downloadInfo);
+    assert.equal(ret_val, fileInfo);
   });
 
   it("should return 0 for registered songs", async function () {
