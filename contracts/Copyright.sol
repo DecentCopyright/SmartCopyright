@@ -1,17 +1,15 @@
-pragma solidity ^0.4.4;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.4.21;
+// pragma experimental ABIEncoderV2;
 
 contract Copyright {
   Song[] public songs;
-  // address[] public users;
-  // assume one song only has one copyright holder for now
+  
   mapping(bytes32 => Song) songInfo;
   mapping(address => UserStatus) userInfo;
 
   event registerEvent(bytes32 songID);
   event licenseEvent(bytes32 songID, address authorized);
-  // event downloadEvent(bytes32 songID, string fileInfo);
-
+  
   struct ShareHolder {
     address addr;
     uint share;
@@ -26,38 +24,53 @@ contract Copyright {
   struct Song {
     bool registered;
     bytes32 ID;
-    bytes32 fileURL;
-    bytes32 password; // URL ' ' password
     bytes32 name;
-    
+    bytes32 fileURL;
+    bytes32 password; 
     uint price;
     ShareHolder[] shareHolders;
-    
     address[] licenseHoldersList;
     mapping(address => bool) licenseHolders;
   }
 
+  
+  // -------------- User registration
+
   //TODO: check duplicate
   function userRegister() public {
-    // users.push(msg.sender);
     userInfo[msg.sender].registered = true;
   }
 
-  function registerCopyright(bytes32 songID, string name, string fileInfo, uint price, address[] holders, uint[] shares) public {
+  function checkUserExists(address user) public constant returns (bool) {
+    return userInfo[user].registered;
+  }
+
+  function amIRegistered() public constant returns (bool) {
+    return checkUserExists(msg.sender);
+  }
+
+  function getMyBalance() public constant returns (uint) {
+    return msg.sender.balance;
+  }
+
+
+
+  // -------------- Upload
+
+  function registerCopyright(bytes32 songID, bytes32 name, bytes32 URL, bytes32 key, uint price, address[] holders, uint[] shares) public {
     require(checkUserExists(msg.sender));
     require(shares.length == holders.length);
     require(checkShareSum(shares));
 
-    /* bytes32 songID = keccak256(name, price, holders); */
     // TODO: check if ID is unique
     songInfo[songID].registered = true;
     songInfo[songID].ID = songID;
     songInfo[songID].name = name;
     songInfo[songID].price = price;
-    songInfo[songID].fileInfo = fileInfo;
+    songInfo[songID].fileURL = URL;
+    songInfo[songID].password = key;
 
     userInfo[msg.sender].uploadedList.push(songID);
-    userInfo[msg.sender].uploadedCount += 1;
     
     require(songInfo[songID].shareHolders.length == 0);   // If we're registering the song for the first time, this should be an empty array
     for(uint i = 0; i < shares.length; i++) {
@@ -72,12 +85,49 @@ contract Copyright {
   }
 
 
-  function getfileInfo(bytes32 songID) public constant returns (string) {
-    require(canDownload(msg.sender, songID));
-    return songInfo[songID].fileInfo;
+
+  // -------------- Purchase
+
+  function checkSongExists(bytes32 songID) public constant returns (bool) {
+    return songInfo[songID].registered;
   }
 
-  function canDownload(address user, bytes32 songID) public returns (bool) {
+  function buyLicense(bytes32 songID) public payable {
+    require(checkUserExists(msg.sender));
+    require(checkSongExists(songID));
+
+    uint price = songInfo[songID].price;
+    // Check that the amount paid is >= the price
+    // the ether is paid to the smart contract first through payable function
+    require(msg.value >= price);
+    userInfo[msg.sender].purchasedList.push(songID);
+    
+    songInfo[songID].licenseHolders[msg.sender] = true;
+    songInfo[songID].licenseHoldersList.push(msg.sender);
+    // pay the coopyright holder
+    payRoyalty(songID, msg.value);
+
+    emit licenseEvent(songID, msg.sender);
+  }
+
+  function payRoyalty(bytes32 songID, uint amount) private {
+    ShareHolder[] storage holders = songInfo[songID].shareHolders;
+    for(uint i = 0; i < holders.length; i++) {
+      ShareHolder storage holder = holders[i];
+      holder.addr.transfer(amount * holder.share / 100);
+    }
+  }
+
+
+
+  // -------------- Download
+
+  function getfileInfo(bytes32 songID) public constant returns (bytes32[2]) {
+    require(canDownload(msg.sender, songID));
+    return [songInfo[songID].fileURL, songInfo[songID].password];
+  }
+
+  function canDownload(address user, bytes32 songID) public constant returns (bool) {
     return (checkPurchased(user, songID) || checkUploaded(user, songID));
   }
 
@@ -86,56 +136,18 @@ contract Copyright {
   }
 
   function checkUploaded(address user, bytes32 songID) public constant returns (bool) {
-    for(unit i = 0; i < songInfo[songID].shareHolders.leangh; i++) {
-      if (songInfo[songID].shareHolders[i] == user) {
+    ShareHolder[] storage holders = songInfo[songID].shareHolders;
+    for(uint i = 0; i < holders.length; i++) {
+      if (holders[i].addr == user) {
         return true;
       }
     }
     return false;
   }
 
-  function checkUserExists(address user) public constant returns (bool) {
-    return userInfo[user].registered;
-  }
 
-  function amIRegistered() public constant returns (bool) {
-    return checkUserExists(msg.sender);
-  }
 
-  function checkSongExists(bytes32 songID) public constant returns (bool) {
-    return songInfo[songID].registered;
-  }
-
-  function buyLicense(bytes32 songID) public payable {
-  	require(checkUserExists(msg.sender));
-    require(checkSongExists(songID));
-
-  	uint price = songInfo[songID].price;
-  	// Check that the amount paid is >= the price
-  	// the ether is paid to the smart contract first through payable function
-  	require(msg.value >= price);
-    userInfo[msg.sender].purchasedSongs[songID] = 1;
-    userInfo[msg.sender].purchasedList.push(songID);
-    userInfo[msg.sender].purchasedCount += 1;
-    songInfo[songID].licenseHoldersList.push(msg.sender);
-    // pay the coopyright holder
-  	payRoyalty(songID, msg.value);
-
-    emit licenseEvent(songID, msg.sender);
-  }
-
-  function payRoyalty(bytes32 songID, uint amount) private {
-    ShareHolder[] holders = songInfo[songID].shareHolders;
-    for(uint i = 0; i < holders.length; i++) {
-      ShareHolder holder = holders[i];
-      holder.addr.transfer(amount * holder.share / 100);
-    }
-  	// holderInfo[song].add.transfer(amount);
-  }
-
-  function getMyBalance() public constant returns (uint) {
-  	return msg.sender.balance;
-  }
+  // -------------- Query song list
 
   function getPurchasedSongs() public constant returns (bytes32[]) {
     require(checkUserExists(msg.sender));
