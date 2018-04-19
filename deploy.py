@@ -1,9 +1,16 @@
 import json
 import web3
-
 from web3 import Web3, EthereumTesterProvider
 from solc import compile_files
 from web3.contract import ConciseContract
+
+import argparse
+import os
+import tarfile
+import random
+import string
+import ipfsapi
+from simplecrypt import encrypt, decrypt
 
 compiled_sol = compile_files(['contracts/Copyright.sol']) # Compiled source code
 contract_interface = compiled_sol['contracts/Copyright.sol:Copyright']
@@ -44,7 +51,30 @@ songName = 'ssongSsong'
 price = 1000
 holders = [w3.eth.accounts[0]]
 shares = [100]
-fileInfo = 'fake_URL fake_key'
+
+# ------------- ipfs / encryption stuff
+ipfs = ipfsapi.connect('127.0.0.1', 5001)
+tar_path = "__temp.tar"
+# generate random password key
+password = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(16)])
+# get file path
+path = 'to_upload/DemoZero.mp3'
+basename = os.path.basename(path)
+# create archive
+tar = tarfile.open(tar_path, "w")
+tar.add(path, arcname=basename)
+tar.close()
+# encrypt
+print("encrypting......")
+file = open(tar_path, mode='rb')
+encrypted_data = encrypt(password, file.read())
+# upload to ipfs
+print("uploading to IPFS......")
+ipfs_hash = ipfs.add_bytes(encrypted_data)
+fileInfo = '{} {}'.format(ipfs_hash, password)
+print("\tfileInfo: " + fileInfo)
+# ----------------------
+
 tx_hash = c.functions.registerCopyright(songName, fileInfo, price, holders, shares).transact({'from': w3.eth.accounts[0]})
 tx_receipt = w3.eth.getTransactionReceipt(tx_hash)
 logs = c.events.registerEvent().processReceipt(tx_receipt)
@@ -62,9 +92,27 @@ print('Get file info')
 purchased_fileInfo = c.functions.getDownloadInfo(songID).call({'from': w3.eth.accounts[1]});
 print("\tpurchased_fileInfo: " + purchased_fileInfo)
 
-# Getters + Setters for web3.eth.contract object
-# print('Contract value: {}'.format(contract_instance.greet()))
-# v = contract_instance.setGreeting('Nihao', transact={'from': w3.eth.accounts[0]})
-# print('result?: {}'.format(Web3.toText(v)))
-# print('Setting value to: Nihao')
-# print('Contract value: {}'.format(contract_instance.greet()))
+# ------------- ipfs / decryption stuff
+# parse file info
+splitted = purchased_fileInfo.split()
+purchased_url = splitted[0]
+purchased_key = splitted[1]
+print("downloading from IPFS......")
+ipfs.get(purchased_url)
+# decrypt
+print("decrypting......")
+downloaded_file = open(purchased_url, mode='rb')
+decrypted_data = decrypt(purchased_key, downloaded_file.read())
+# remove raw ipfs data
+os.remove(purchased_url)
+# write to tar file
+tar_output = open(tar_path, 'wb')
+tar_output.write(decrypted_data)
+tar_output.close()
+# extract data from tar
+print("extracting......")
+tar = tarfile.open(tar_path)
+tar.extractall()
+tar.close()
+# ----------------------
+os.remove(tar_path)
