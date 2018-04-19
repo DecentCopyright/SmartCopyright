@@ -19,35 +19,28 @@ contract Copyright {
 
   struct UserStatus {
     bool registered;
-    mapping(bytes32 => uint) purchasedSongs;
     bytes32[] purchasedList;
-    uint purchasedCount;
-    mapping(bytes32 => uint) uploadedSongs;
     bytes32[] uploadedList;
-    uint uploadedCount;
   }
 
   struct Song {
     bool registered;
     bytes32 ID;
-    string fileInfo; // URL ' ' password
-    string name;
-    ShareHolder[] shareHolders;
+    bytes32 fileURL;
+    bytes32 password; // URL ' ' password
+    bytes32 name;
+    
     uint price;
-    address[] licenseHolders;
-
-    /* address[] licenseHoldersList;
-    mapping(address => bool) licenseHolders; */
+    ShareHolder[] shareHolders;
+    
+    address[] licenseHoldersList;
+    mapping(address => bool) licenseHolders;
   }
 
   //TODO: check duplicate
   function userRegister() public {
     // users.push(msg.sender);
     userInfo[msg.sender].registered = true;
-  }
-
-  function getSongHash(string name, uint price, address[] holders, uint[] shares) public returns (bytes32) {
-    return keccak256(name, price, holders, shares);
   }
 
   function registerCopyright(bytes32 songID, string name, string fileInfo, uint price, address[] holders, uint[] shares) public {
@@ -62,9 +55,10 @@ contract Copyright {
     songInfo[songID].name = name;
     songInfo[songID].price = price;
     songInfo[songID].fileInfo = fileInfo;
-    userInfo[msg.sender].uploadedSongs[songID] = 1;
+
     userInfo[msg.sender].uploadedList.push(songID);
     userInfo[msg.sender].uploadedCount += 1;
+    
     require(songInfo[songID].shareHolders.length == 0);   // If we're registering the song for the first time, this should be an empty array
     for(uint i = 0; i < shares.length; i++) {
       ShareHolder memory holder = ShareHolder({ addr: holders[i], share: shares[i]});
@@ -77,26 +71,27 @@ contract Copyright {
     songs.push(songInfo[songID]);
   }
 
+
   function getfileInfo(bytes32 songID) public constant returns (string) {
     require(canDownload(msg.sender, songID));
-    // emit downloadEvent(songID, songInfo[songID].fileInfo);
     return songInfo[songID].fileInfo;
   }
 
   function canDownload(address user, bytes32 songID) public returns (bool) {
-    if(userInfo[user].uploadedSongs[songID] == 1 ||
-      userInfo[user].purchasedSongs[songID] == 1) {
-        return true;
-      }
-      return false;
+    return (checkPurchased(user, songID) || checkUploaded(user, songID));
   }
 
-  function checkShareSum(uint[] list) public constant returns (bool) {
-    uint sum = 0;
-    for(uint i = 0; i < list.length; i++) {
-      sum += list[i];
+  function checkPurchased(address user, bytes32 songID) public constant returns (bool) {
+    return songInfo[songID].licenseHolders[user];
+  }
+
+  function checkUploaded(address user, bytes32 songID) public constant returns (bool) {
+    for(unit i = 0; i < songInfo[songID].shareHolders.leangh; i++) {
+      if (songInfo[songID].shareHolders[i] == user) {
+        return true;
+      }
     }
-    return sum == 100;
+    return false;
   }
 
   function checkUserExists(address user) public constant returns (bool) {
@@ -111,10 +106,6 @@ contract Copyright {
     return songInfo[songID].registered;
   }
 
-  function checkSongPrice(bytes32 songID) public constant returns (uint) {
-    return songInfo[songID].price;
-  }
-
   function buyLicense(bytes32 songID) public payable {
   	require(checkUserExists(msg.sender));
     require(checkSongExists(songID));
@@ -126,7 +117,7 @@ contract Copyright {
     userInfo[msg.sender].purchasedSongs[songID] = 1;
     userInfo[msg.sender].purchasedList.push(songID);
     userInfo[msg.sender].purchasedCount += 1;
-    songInfo[songID].licenseHolders.push(msg.sender);
+    songInfo[songID].licenseHoldersList.push(msg.sender);
     // pay the coopyright holder
   	payRoyalty(songID, msg.value);
 
@@ -198,4 +189,11 @@ contract Copyright {
     return unpurchasedSongs;
   } */
 
+  function checkShareSum(uint[] list) private constant returns (bool) {
+    uint sum = 0;
+    for(uint i = 0; i < list.length; i++) {
+      sum += list[i];
+    }
+    return sum == 100;
+  }
 }
