@@ -21,17 +21,16 @@ contract("Copyright!", function (accounts) {
     // let hash = await contract.songHash.call(songName, price, holders, shares);
     // // console.log(hash);
     let downloadInfo = "song_url password";
-    let hash;
-    // hash = await contract.getSongHash(songName, price, holders, shares);
-    // console.log("hash get: " + hash);
-    let status = await contract.registerCopyright(songName, downloadInfo, price, holders, shares);
-
-    for (let e of status.logs) {
-      if (e.event == "registerEvent") {
-        hash = e.args.param
-        console.log("Hash: " + hash);
-      }
-    }
+    let hash = await contract.getSongHash.call(songName, price, holders, shares);
+    console.log("hash get: " + hash);
+    let status = await contract.registerCopyright(hash, songName, downloadInfo, price, holders, shares);
+    //
+    // for (let e of status.logs) {
+    //   if (e.event == "registerEvent") {
+    //     hash = e.args.param
+    //     console.log("Hash: " + hash);
+    //   }
+    // }
 
     let ret_url = await contract.getDownloadInfo.call(hash);
     console.log("return url: " + ret_url);
@@ -43,11 +42,11 @@ contract("Copyright!", function (accounts) {
 
   it("should return downloadInfo after purchase", async function () {
     const contract = await Copyright.deployed();
-    let songID = "0x25616ed93c0fd28884149440bac5a7f78dfb091b12e608b580b7253c171499c8";
+    let songID = "0x24a80a9a2d03f38eaf4c19fc10e3cf9eeb559654a74d411662f28367bcd6f1cf";
     let price = 1000;
     let status = await contract.buyLicense(songID, {value: price});
     let downloadInfo = "song_url password";
-    let ret_val = await contract.getDownloadInfo(songID);
+    let ret_val = await contract.getDownloadInfo.call(songID);
     console.log("return url: " + ret_val);
     assert.equal(ret_val, downloadInfo);
   });

@@ -24,7 +24,7 @@ contract Copyright {
 
   struct Song {
     bytes32 ID;
-    string downloadInfo;
+    string downloadInfo; // URL ' ' password
     string name;
     ShareHolder[] shareHolders;
     uint price;
@@ -38,21 +38,15 @@ contract Copyright {
   }
 
   function getSongHash(string name, uint price, address[] holders, uint[] shares) public returns (bytes32) {
-    bytes32 hashed = keccak256(name, price, holders, shares);
-    /* bytes memory bytesArray = new bytes(32);
-    for (uint256 i; i < 32; i++) {
-        bytesArray[i] = hashed[i];
-    }
-    return string(bytesArray); */
-    return hashed;
+    return keccak256(name, price, holders, shares);
   }
 
-  function registerCopyright(string name, string downloadInfo, uint price, address[] holders, uint[] shares) public {
+  function registerCopyright(bytes32 songID, string name, string downloadInfo, uint price, address[] holders, uint[] shares) public {
     require(checkUserExists(msg.sender));
     require(shares.length == holders.length);
     require(checkShareSum(shares));
 
-    bytes32 songID = keccak256(name, price, holders);
+    /* bytes32 songID = keccak256(name, price, holders); */
     // TODO: check if ID is unique
     songInfo[songID].ID = songID;
     songInfo[songID].name = name;
