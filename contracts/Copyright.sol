@@ -25,8 +25,9 @@ contract Copyright {
     bool registered;
     bytes32 ID;
     bytes32 name;
-    bytes32 fileURL;
-    bytes32 password; 
+    bytes32 fileURL1;
+    bytes32 fileURL2;
+    bytes32 key; 
     uint price;
     ShareHolder[] shareHolders;
     address[] licenseHoldersList;
@@ -57,18 +58,21 @@ contract Copyright {
 
   // -------------- Upload
 
-  function registerCopyright(bytes32 songID, bytes32 name, bytes32 URL, bytes32 key, uint price, address[] holders, uint[] shares) public {
+  function registerCopyright(bytes32 name, bytes32 URL1, bytes32 URL2, bytes32 password, uint price, address[] holders, uint[] shares) public {
     require(checkUserExists(msg.sender));
     require(shares.length == holders.length);
     require(checkShareSum(shares));
 
     // TODO: check if ID is unique
+    
+    bytes32 songID = keccak256(name, price, URL1, URL2);
     songInfo[songID].registered = true;
     songInfo[songID].ID = songID;
     songInfo[songID].name = name;
     songInfo[songID].price = price;
-    songInfo[songID].fileURL = URL;
-    songInfo[songID].password = key;
+    songInfo[songID].fileURL1 = URL1;
+    songInfo[songID].fileURL2 = URL2;
+    songInfo[songID].key = password;
 
     userInfo[msg.sender].uploadedList.push(songID);
     
@@ -122,9 +126,9 @@ contract Copyright {
 
   // -------------- Download
 
-  function getfileInfo(bytes32 songID) public constant returns (bytes32[2]) {
+  function getFileInfo(bytes32 songID) public constant returns (bytes32[3]) {
     require(canDownload(msg.sender, songID));
-    return [songInfo[songID].fileURL, songInfo[songID].password];
+    return [songInfo[songID].fileURL1, songInfo[songID].fileURL2, songInfo[songID].key];
   }
 
   function canDownload(address user, bytes32 songID) public constant returns (bool) {

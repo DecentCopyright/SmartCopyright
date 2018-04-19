@@ -12,6 +12,11 @@ import string
 import ipfsapi
 from simplecrypt import encrypt, decrypt
 
+
+def chunkstring(string, length):
+	return (string[0+i:length+i] for i in range(0, len(string), length))
+
+
 compiled_sol = compile_files(['contracts/Copyright.sol']) # Compiled source code
 contract_interface = compiled_sol['contracts/Copyright.sol:Copyright']
 
@@ -71,11 +76,17 @@ encrypted_data = encrypt(password, file.read())
 # upload to ipfs
 print("uploading to IPFS......")
 ipfs_hash = ipfs.add_bytes(encrypted_data)
-fileInfo = '{} {}'.format(ipfs_hash, password)
-print("\tfileInfo: " + fileInfo)
+print("\tfileInfo: {} {}".format(ipfs_hash, password))
 # ----------------------
 
-tx_hash = c.functions.registerCopyright(songName, fileInfo, price, holders, shares).transact({'from': w3.eth.accounts[0]})
+url_slices = list(chunkstring(ipfs_hash, 32))
+
+name = Web3.toBytes(text=songName) 
+url1 = Web3.toBytes(text=url_slices[0])
+url2 = Web3.toBytes(text=url_slices[1])
+key = Web3.toBytes(text=password)
+
+tx_hash = c.functions.registerCopyright(name, url1, url2, key, price, holders, shares).transact({'from': w3.eth.accounts[0]})
 tx_receipt = w3.eth.getTransactionReceipt(tx_hash)
 logs = c.events.registerEvent().processReceipt(tx_receipt)
 songID = Web3.toHex(logs[0]['args']['songID'])
@@ -86,17 +97,17 @@ tx_hash = c.functions.buyLicense(songID).transact({'from': w3.eth.accounts[1], '
 tx_receipt = w3.eth.getTransactionReceipt(tx_hash)
 logs = c.events.licenseEvent().processReceipt(tx_receipt)
 purchased_songID = Web3.toHex(logs[0]['args']['songID'])
-print("\tpurchased_songID: " + purchased_songID)
+print("\tbought: " + purchased_songID)
 
 print('Get file info')
-purchased_fileInfo = c.functions.getDownloadInfo(songID).call({'from': w3.eth.accounts[1]});
-print("\tpurchased_fileInfo: " + purchased_fileInfo)
+purchased_fileInfo = c.functions.getFileInfo(songID).call({'from': w3.eth.accounts[1]});
+for b in purchased_fileInfo:
+	print(b)
+purchased_url = (Web3.toText(purchased_fileInfo[0]) + Web3.toText(purchased_fileInfo[1])).rstrip('\x00')
+purchased_key = Web3.toText(purchased_fileInfo[2]).rstrip('\x00')
+print("\tpurchased_fileInfo: " + purchased_url)
 
 # ------------- ipfs / decryption stuff
-# parse file info
-splitted = purchased_fileInfo.split()
-purchased_url = splitted[0]
-purchased_key = splitted[1]
 print("downloading from IPFS......")
 ipfs.get(purchased_url)
 # decrypt
