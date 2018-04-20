@@ -3,13 +3,13 @@ pragma solidity ^0.4.21;
 
 contract Copyright {
   Song[] public songs;
-  
+
   mapping(bytes32 => Song) songInfo;
   mapping(address => UserStatus) userInfo;
 
   event registerEvent(bytes32 songID);
   event licenseEvent(bytes32 songID, address authorized);
-  
+
   struct ShareHolder {
     address addr;
     uint share;
@@ -27,14 +27,14 @@ contract Copyright {
     bytes32 name;
     bytes32 fileURL1;
     bytes32 fileURL2;
-    bytes32 key; 
+    bytes32 key;
     uint price;
     ShareHolder[] shareHolders;
     address[] licenseHoldersList;
     mapping(address => bool) licenseHolders;
   }
 
-  
+
   // -------------- User registration
 
   //TODO: check duplicate
@@ -64,8 +64,8 @@ contract Copyright {
     require(checkShareSum(shares));
 
     // TODO: check if ID is unique
-    
-    bytes32 songID = keccak256(name, price, URL1, URL2);
+
+    bytes32 songID = keccak256(name, URL1, songs.length);
     songInfo[songID].registered = true;
     songInfo[songID].ID = songID;
     songInfo[songID].name = name;
@@ -74,8 +74,10 @@ contract Copyright {
     songInfo[songID].fileURL2 = URL2;
     songInfo[songID].key = password;
 
+    // TODO:
+    // Add this song to every shareholder's userInfo?
     userInfo[msg.sender].uploadedList.push(songID);
-    
+
     require(songInfo[songID].shareHolders.length == 0);   // If we're registering the song for the first time, this should be an empty array
     for(uint i = 0; i < shares.length; i++) {
       ShareHolder memory holder = ShareHolder({ addr: holders[i], share: shares[i]});
@@ -88,7 +90,7 @@ contract Copyright {
     songs.push(songInfo[songID]);
   }
 
-  function checkShareSum(uint[] list) private constant returns (bool) {
+  function checkShareSum(uint[] list) internal pure returns (bool) {
     uint sum = 0;
     for(uint i = 0; i < list.length; i++) {
       sum += list[i];
@@ -113,7 +115,7 @@ contract Copyright {
     // the ether is paid to the smart contract first through payable function
     require(msg.value >= price);
     userInfo[msg.sender].purchasedList.push(songID);
-    
+
     songInfo[songID].licenseHolders[msg.sender] = true;
     songInfo[songID].licenseHoldersList.push(msg.sender);
     // pay the coopyright holder
@@ -161,60 +163,53 @@ contract Copyright {
 
   // -------------- Query song list
 
-  function getSongInfro(bytes32 songID) public constant returns (bytes32[2]) {
+  function getSongInfo(bytes32 songID) public constant returns (bytes32[2]) {
     Song storage song = songInfo[songID];
     return [song.name, bytes32(song.price)];
   }
 
-  function getPurchasedSongs() public constant returns (bytes32[]) {
+  function getSongs(uint from, uint count, bool reverse) public constant returns (bytes32[]) {
     require(checkUserExists(msg.sender));
-    return userInfo[msg.sender].purchasedList;
-    /* uint counter = 0;
-    uint size = userInfo[msg.sender].purchasedCount;
-    string[] memory purchasedSongs = new string[](size);
-    bytes32[] memory purchasedSongs = new bytes32[](10);
-    string[2] purchasedSongs;
-    bytes32 songID;
-    for(uint i = 0; i < songs.length; i++) {
-      bytes32 songID = songs[i].ID;
-      songID = songs[i].ID;
-      if (userInfo[msg.sender].purchasedSongs[songID] == 1) {
-        purchasedSongs[counter] = bytes32(songs[i].name);
-        counter += 1;
 
-        purchasedSongs[counter] = songs[i].ID;
-        counter += 1;
-
-        purchasedSongs[counter] = songs[i].ID;
-        counter += 1;
-      } */
-    /* } */
-    /* return purchasedSongs; */
-    //userInfo[msg.sender].purchasedSongs[songID] == 1;
-    /* return true; */
-  }
-/*
-  function getUploadedSongs() public returns (Song[]) {
-    require(checkUserExists(msg.sender));
-    Song[] uploadedSongs;
-    for(uint i = 0; i < songs.length; i++) {
-      bytes32 songID = songs[i].ID;
-      if (userInfo[msg.sender].uploadedSongs[songID] == 1) {
-        uploadedSongs.push(songs[i]);
-      }
+    uint lastIndex = songs.length-1;
+    if (from+count > lastIndex) {
+      count = lastIndex-from;
     }
-    return uploadedSongs;
+
+    bytes32[] memory response = new bytes32[](count * 3);
+    for (uint i = from; i < from+count; i++) {
+      uint index = !reverse ? i : lastIndex-i;
+      if (index > lastIndex || index < 0) {
+        break;
+      }
+      Song storage song = songs[index];
+      response[3*i + 0] = song.ID;
+      response[3*i + 1] = song.name;
+      response[3*i + 2] = bytes32(song.price);
+    }
+
+    return response;
   }
 
-  function getUnpurchasedSongs() public returns (Song[]) {
-    require(checkUserExists(msg.sender));
-    Song[] unpurchasedSongs;
-    for(uint i = 0; i < songs.length; i++) {
-      bytes32 songID = songs[i].ID;
-      if (userInfo[msg.sender].uploadedSongs[songID] != 1 && userInfo[msg.sender].purchasedSongs[songID] != 1) {
-        unpurchasedSongs.push(songs[i]);
-      }
+  function getSongList(bytes32[] songList) internal view returns (bytes32[]) {
+    uint count = songList.length;
+    bytes32[] memory response = new bytes32[](count * 2);
+    for (uint i = 0; i < count; i++) {
+      bytes32 songID = songList[i];
+      Song storage song = songInfo[songID];
+      response[2*i + 0] = song.ID;
+      response[2*i + 1] = song.name;
     }
-    return unpurchasedSongs;
-  } */
+    return response;
+  }
+
+  function getMyPurchasedSongs() public constant returns (bytes32[]) {
+    require(checkUserExists(msg.sender));
+    return getSongList(userInfo[msg.sender].purchasedList);
+  }
+
+  function getMyUploadedSongs() public constant returns (bytes32[]) {
+    require(checkUserExists(msg.sender));
+    return getSongList(userInfo[msg.sender].uploadedList);
+  }
 }

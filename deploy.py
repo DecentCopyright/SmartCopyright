@@ -12,6 +12,47 @@ import string
 import ipfsapi
 # from simplecrypt import encrypt, decrypt
 
+class Song:
+	def __init__(self, array):
+		self.ID = Web3.toHex(array[0])
+		self.name = Web3.toText(array[1])
+		if len(array) == 3:
+			self.price = Web3.toInt(array[2])
+		else:
+			self.price = -1
+
+	@staticmethod
+	def chunks(l, n):
+		for i in range(0, len(l), n):
+			yield l[i:i + n]
+
+	@classmethod
+	def getSongs(cls, contract, start, count, reversed=True):
+		result = []
+		array = contract.functions.getSongs(start, count, reversed).call()
+		for l in cls.chunks(array, 3):
+			result.append(cls(l))
+		return result
+
+	@classmethod
+	def getMyPurchasedSongs(cls, contract, account):
+		result = []
+		array = contract.functions.getMyPurchasedSongs().call({'from': account})
+		for l in cls.chunks(array, 2):
+			result.append(cls(l))
+		return result
+
+	@classmethod
+	def getMyUploadedSongs(cls, contract, account):
+		result = []
+		array = contract.functions.getMyUploadedSongs().call({'from': account})
+		for l in cls.chunks(array, 2):
+			result.append(cls(l))
+		return result
+
+	def __str__(self):
+		return "ID:{} name:{}".format(self.ID, self.name)
+
 
 def encrypt(key, data):
 	return data
@@ -34,7 +75,7 @@ with open('copyring.abi', 'w') as outfile:
 
 # Get transaction hash from deployed contract
 # Get tx receipt to get contract address
-tx_hash = contract.constructor().transact({'from': w3.eth.accounts[0]}) 
+tx_hash = contract.constructor().transact({'from': w3.eth.accounts[0]})
 tx_receipt = w3.eth.getTransactionReceipt(tx_hash)
 contract_address = tx_receipt['contractAddress']
 print('Contract address: {}'.format(contract_address))
@@ -86,16 +127,33 @@ print("\tfileInfo: {} {}".format(ipfs_hash, password))
 
 url_slices = list((ipfs_hash[0+i:32+i] for i in range(0, len(ipfs_hash), 32)))
 
-name = Web3.toBytes(text=songName) 
+name = Web3.toBytes(text=songName)
 url1 = Web3.toBytes(text=url_slices[0])
 url2 = Web3.toBytes(text=url_slices[1])
 key = Web3.toBytes(text=password)
 
 tx_hash = c.functions.registerCopyright(name, url1, url2, key, price, holders, shares).transact({'from': w3.eth.accounts[0]})
+tx_hash = c.functions.registerCopyright(name, url1, url2, key, price, holders, shares).transact({'from': w3.eth.accounts[0]})
+tx_hash = c.functions.registerCopyright(name, url1, url2, key, price, holders, shares).transact({'from': w3.eth.accounts[0]})
+tx_hash = c.functions.registerCopyright(name, url1, url2, key, price, holders, shares).transact({'from': w3.eth.accounts[0]})
+tx_hash = c.functions.registerCopyright(name, url1, url2, key, price, holders, shares).transact({'from': w3.eth.accounts[0]})
+
 tx_receipt = w3.eth.getTransactionReceipt(tx_hash)
 logs = c.events.registerEvent().processReceipt(tx_receipt)
 songID = Web3.toHex(logs[0]['args']['songID'])
 print("\tsongID: " + songID)
+
+
+print("Get songs")
+songs = Song.getSongs(c, 0, 3)
+for s in songs:
+	print(s)
+
+print("Get uploaded songs")
+songs = Song.getMyUploadedSongs(c, w3.eth.accounts[0])
+for s in songs:
+	print(s)
+
 
 print('Purchasing a song')
 tx_hash = c.functions.buyLicense(songID).transact({'from': w3.eth.accounts[1], 'value': price})
@@ -106,8 +164,6 @@ print("\tbought: " + purchased_songID)
 
 print('Get file info')
 purchased_fileInfo = c.functions.getFileInfo(songID).call({'from': w3.eth.accounts[1]});
-for b in purchased_fileInfo:
-	print(b)
 purchased_url = (Web3.toText(purchased_fileInfo[0]) + Web3.toText(purchased_fileInfo[1])).rstrip('\x00')
 purchased_key = Web3.toText(purchased_fileInfo[2]).rstrip('\x00')
 print("\tpurchased_fileInfo: " + purchased_url)
@@ -135,4 +191,3 @@ tar.close()
 os.remove(tar_path)
 
 print("DONE!")
-
