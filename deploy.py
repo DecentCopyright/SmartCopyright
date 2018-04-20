@@ -18,8 +18,6 @@ class Song:
 		self.name = Web3.toText(array[1])
 		if len(array) == 3:
 			self.price = Web3.toInt(array[2])
-		else:
-			self.price = -1
 
 	@staticmethod
 	def chunks(l, n):
@@ -29,7 +27,7 @@ class Song:
 	@classmethod
 	def getSongs(cls, contract, start, count, reversed=True):
 		result = []
-		array = contract.functions.getSongs(start, count, reversed).call()
+		array = contract.functions.getSongList(start, count, reversed).call()
 		for l in cls.chunks(array, 3):
 			result.append(cls(l))
 		return result

@@ -168,9 +168,7 @@ contract Copyright {
     return [song.name, bytes32(song.price)];
   }
 
-  function getSongs(uint from, uint count, bool reverse) public constant returns (bytes32[]) {
-    require(checkUserExists(msg.sender));
-
+  function getSongList(uint from, uint count, bool reverse) public constant returns (bytes32[]) {
     uint lastIndex = songs.length-1;
     if (from+count > lastIndex) {
       count = lastIndex-from;
@@ -191,7 +189,7 @@ contract Copyright {
     return response;
   }
 
-  function getSongList(bytes32[] songList) internal view returns (bytes32[]) {
+  function prepareSongList(bytes32[] songList) internal view returns (bytes32[]) {
     uint count = songList.length;
     bytes32[] memory response = new bytes32[](count * 2);
     for (uint i = 0; i < count; i++) {
@@ -205,11 +203,11 @@ contract Copyright {
 
   function getMyPurchasedSongs() public constant returns (bytes32[]) {
     require(checkUserExists(msg.sender));
-    return getSongList(userInfo[msg.sender].purchasedList);
+    return prepareSongList(userInfo[msg.sender].purchasedList);
   }
 
   function getMyUploadedSongs() public constant returns (bytes32[]) {
     require(checkUserExists(msg.sender));
-    return getSongList(userInfo[msg.sender].uploadedList);
+    return prepareSongList(userInfo[msg.sender].uploadedList);
   }
 }
