@@ -10,11 +10,14 @@ import tarfile
 import random
 import string
 import ipfsapi
-from simplecrypt import encrypt, decrypt
+# from simplecrypt import encrypt, decrypt
 
 
-def chunkstring(string, length):
-	return (string[0+i:length+i] for i in range(0, len(string), length))
+def encrypt(key, data):
+	return data
+
+def decrypt(key, data):
+	return data
 
 
 compiled_sol = compile_files(['contracts/Copyright.sol']) # Compiled source code
@@ -73,13 +76,15 @@ tar.close()
 print("encrypting......")
 file = open(tar_path, mode='rb')
 encrypted_data = encrypt(password, file.read())
+file.close()
 # upload to ipfs
 print("uploading to IPFS......")
 ipfs_hash = ipfs.add_bytes(encrypted_data)
 print("\tfileInfo: {} {}".format(ipfs_hash, password))
 # ----------------------
 
-url_slices = list(chunkstring(ipfs_hash, 32))
+
+url_slices = list((ipfs_hash[0+i:32+i] for i in range(0, len(ipfs_hash), 32)))
 
 name = Web3.toBytes(text=songName) 
 url1 = Web3.toBytes(text=url_slices[0])
@@ -114,6 +119,7 @@ ipfs.get(purchased_url)
 print("decrypting......")
 downloaded_file = open(purchased_url, mode='rb')
 decrypted_data = decrypt(purchased_key, downloaded_file.read())
+downloaded_file.close()
 # remove raw ipfs data
 os.remove(purchased_url)
 # write to tar file
@@ -127,3 +133,6 @@ tar.extractall()
 tar.close()
 # ----------------------
 os.remove(tar_path)
+
+print("DONE!")
+

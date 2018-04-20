@@ -88,6 +88,14 @@ contract Copyright {
     songs.push(songInfo[songID]);
   }
 
+  function checkShareSum(uint[] list) private constant returns (bool) {
+    uint sum = 0;
+    for(uint i = 0; i < list.length; i++) {
+      sum += list[i];
+    }
+    return (sum == 100);
+  }
+
 
 
   // -------------- Purchase
@@ -153,6 +161,11 @@ contract Copyright {
 
   // -------------- Query song list
 
+  function getSongInfro(bytes32 songID) public constant returns (bytes32[2]) {
+    Song storage song = songInfo[songID];
+    return [song.name, bytes32(song.price)];
+  }
+
   function getPurchasedSongs() public constant returns (bytes32[]) {
     require(checkUserExists(msg.sender));
     return userInfo[msg.sender].purchasedList;
@@ -204,12 +217,4 @@ contract Copyright {
     }
     return unpurchasedSongs;
   } */
-
-  function checkShareSum(uint[] list) private constant returns (bool) {
-    uint sum = 0;
-    for(uint i = 0; i < list.length; i++) {
-      sum += list[i];
-    }
-    return sum == 100;
-  }
 }
