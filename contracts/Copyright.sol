@@ -169,8 +169,8 @@ contract Copyright {
   }
 
   function getSongList(uint from, uint count, bool reverse) public constant returns (bytes32[]) {
-    uint lastIndex = songs.length-1;
-    if (from+count > lastIndex) {
+    uint lastIndex = songs.length - 1;
+    if (from + count > lastIndex) {
       count = lastIndex-from;
     }
 
