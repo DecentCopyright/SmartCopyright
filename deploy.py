@@ -9,12 +9,12 @@ contract_interface = compiled_sol['contracts/Copyright.sol:Copyright']
 
 # web3.py instance
 # Instantiate and deploy contract
-w3 = Web3(IPCProvider("./data/geth.ipc"))
+w3 = Web3(IPCProvider("/Users/bangtoven/hacking/smart-contract/client/eth/geth.ipc"))
 contract = w3.eth.contract(abi=contract_interface['abi'], bytecode=contract_interface['bin'])
 
 # Get transaction hash from deployed contract
 # Get tx receipt to get contract address
-tx_hash = contract.constructor().transact({'from': w3.eth.accounts[0], 'value': '0x64', 'gas': '0xF4240' })
+tx_hash = contract.constructor().transact({'from': w3.eth.accounts[0] })
 print("-------------TX_HASH-------------")
 # print(Web3.toText(tx_hash))
 tx_receipt = None
@@ -25,8 +25,9 @@ while tx_receipt is None:
 	counter += 1
 print("Number of seconds for it to be mined: ", counter)
 contract_address = tx_receipt['contractAddress']
+print(tx_receipt)
 print('Contract address: {}'.format(contract_address))
-print('Deployed!\n')
+print('Deployed????\n')
 
 deployed_result = {}
 deployed_result['contract_address'] = contract_address
